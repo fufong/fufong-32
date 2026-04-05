@@ -37,10 +37,10 @@
                     const input = document.getElementById('sheetsUrlInput');
                     if (input) input.value = url;
                 }
-            } catch(e) { console.error('讀取失敗', e); }
+            } catch (e) { console.error('讀取失敗', e); }
         }
 
-        window.loadSheet = async function() {
+        window.loadSheet = async function () {
             const raw = document.getElementById('sheetsUrlInput').value.trim();
             if (!raw) return;
             let embedUrl = raw.replace('/edit', '/preview').replace('/pub', '/preview');
@@ -50,19 +50,19 @@
                 await setDoc(doc(db, 'settings', 'finance'), { sheetsUrl: embedUrl });
                 applySheetUrl(embedUrl);
                 if (typeof toast === 'function') toast('✓ 試算表已儲存');
-            } catch(e) {
+            } catch (e) {
                 if (typeof toast === 'function') toast('✕ 儲存失敗，請重試');
             }
         };
 
         function applySheetUrl(url) {
             const iframe = document.getElementById('financeIframe');
-            const empty  = document.getElementById('financeEmpty');
+            const empty = document.getElementById('financeEmpty');
             if (iframe) { iframe.src = url; iframe.style.display = 'block'; }
-            if (empty)  { empty.style.display = 'none'; }
+            if (empty) { empty.style.display = 'none'; }
         }
 
-        window.loadGalleryFromFirestore = async function() {
+        window.loadGalleryFromFirestore = async function () {
             try {
                 const querySnapshot = await getDocs(collection(db, "gallery"));
                 querySnapshot.forEach((docSnap) => {
@@ -74,10 +74,10 @@
                 });
                 if (typeof window.renderPhotos === 'function') window.renderPhotos();
                 if (typeof window.updateTB === 'function') window.updateTB();
-            } catch(e) { console.error('讀取 Gallery 失敗', e); }
+            } catch (e) { console.error('讀取 Gallery 失敗', e); }
         };
 
-        window.loadCoversFromFirestore = async function() {
+        window.loadCoversFromFirestore = async function () {
             try {
                 const querySnapshot = await getDocs(collection(db, "covers"));
                 querySnapshot.forEach((docSnap) => {
@@ -94,10 +94,10 @@
                         }
                     }
                 });
-            } catch(e) { console.error('讀取 Covers 失敗', e); }
+            } catch (e) { console.error('讀取 Covers 失敗', e); }
         };
 
-        window.loadPlansFromFirestore = async function() {
+        window.loadPlansFromFirestore = async function () {
             try {
                 const ids = ['pi1', 'pi2'];
                 for (const imgId of ids) {
@@ -113,7 +113,7 @@
                         }
                     }
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error('讀取企劃圖片失敗', e);
             }
         };
@@ -295,7 +295,10 @@
         /* Modal Overlay */
         .modal-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: rgba(10, 8, 8, 0.7);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -794,7 +797,7 @@
         }
 
         /* 有圖片時隱藏字母 */
-        .event-thumb img[src]:not([src=""]) ~ .thumb-letter {
+        .event-thumb img[src]:not([src=""])~.thumb-letter {
             display: none;
         }
 
@@ -1193,8 +1196,8 @@
             opacity: 1;
         }
 
-        .plan-hero img[src]:not([src=""]) ~ svg,
-        .plan-hero img[src]:not([src=""]) ~ .lbl {
+        .plan-hero img[src]:not([src=""])~svg,
+        .plan-hero img[src]:not([src=""])~.lbl {
             display: none;
         }
 
@@ -1273,7 +1276,9 @@
             backdrop-filter: blur(6px);
         }
 
-        #lightbox.active { display: flex; }
+        #lightbox.active {
+            display: flex;
+        }
 
         #lightboxImg {
             max-width: 90vw;
@@ -1286,14 +1291,23 @@
         }
 
         @keyframes lbIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to   { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .lightbox-close {
             position: fixed;
-            top: 20px; right: 24px;
-            background: none; border: none;
+            top: 20px;
+            right: 24px;
+            background: none;
+            border: none;
             color: rgba(255, 255, 255, 0.6);
             font-size: 1.5rem;
             cursor: pointer;
@@ -1301,13 +1315,17 @@
             transition: color 180ms ease;
         }
 
-        .lightbox-close:hover { color: white; }
+        .lightbox-close:hover {
+            color: white;
+        }
 
         /* 刪除按鈕 */
         .img-delete-btn {
             position: absolute;
-            top: 6px; right: 6px;
-            width: 24px; height: 24px;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             background: rgba(0, 0, 0, 0.75);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -1322,8 +1340,13 @@
             transition: background 200ms ease;
         }
 
-        .img-delete-btn:hover { background: rgba(180, 40, 40, 0.85); }
-        .admin-mode .img-delete-btn { display: flex; }
+        .img-delete-btn:hover {
+            background: rgba(180, 40, 40, 0.85);
+        }
+
+        .admin-mode .img-delete-btn {
+            display: flex;
+        }
 
         @media (max-width: 768px) {
             .nav-links {
@@ -1422,7 +1445,7 @@
             <div class="intro-container">
                 <div>
                     <div class="section-eyebrow">ABOUT US</div>
-                    <p class="intro-text">已成立32年，是一個將表演性手語融入到舞蹈中的社團，舞種有locking、hip-pop、jazz等等，適合喜歡跳舞及在舞台上展現自己的同學加入！</p>
+                    <p class="intro-text">已成立33年，用舞蹈與雙手說故事，把音樂變成看得見的感動。舞風包含locking、hip-hop、jazz等等，適合喜歡在舞台上展現自我的同學加入！</p>
                 </div>
                 <div>
                     <div class="dance-card">
@@ -1433,12 +1456,12 @@
                     <div class="dance-card">
                         <span class="dance-tag">嘻哈</span>
                         <div class="dance-title">HIP-POP</div>
-                        <div class="dance-desc">融合律動與力量，自由奔放地詮釋音樂情感</div>
+                        <div class="dance-desc">是一種以節奏與律動為核心，強調自由與個人風格的街舞舞風</div>
                     </div>
                     <div class="dance-card">
                         <span class="dance-tag">爵士</span>
                         <div class="dance-title">JAZZ</div>
-                        <div class="dance-desc">優雅流暢的爵士舞風，賦予手語表演戲劇張力</div>
+                        <div class="dance-desc">用俐落的動作與極致的線條，把節奏轉化成張力十足的舞台表現，是一種兼具力量與美感的舞風</div>
                     </div>
                 </div>
             </div>
@@ -1553,7 +1576,7 @@
                     </svg>
                     <div class="lbl" style="color:var(--text-muted)">待上傳</div>
                     <img id="pi1" src="">
-                    <div class="plan-hero-overlay">更換圖片</div>
+                    <div class="plan-hero-overlay">查看圖片</div>
                     <input type="file" onchange="hPlan(event, 'pi1')">
                 </div>
                 <div class="plan-hero locked" id="planHero2">
@@ -1563,7 +1586,7 @@
                     </svg>
                     <div class="lbl" style="color:var(--text-muted)">待上傳</div>
                     <img id="pi2" src="">
-                    <div class="plan-hero-overlay">更換圖片</div>
+                    <div class="plan-hero-overlay">查看圖片</div>
                     <input type="file" onchange="hPlan(event, 'pi2')">
                 </div>
             </div>
@@ -1621,7 +1644,8 @@
             <div class="finance-link-input" id="financeLinkInput" style="display:none;">
                 <input type="text" id="sheetsUrlInput" placeholder="貼上 Google Sheets 分享連結..."
                     style="width:100%;padding:10px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:4px;color:#e8e3dc;font-family:inherit;font-size:0.9rem;">
-                <button onclick="loadSheet()" class="btn-ghost" style="margin-top:12px;padding:8px 24px;font-size:0.8rem;">
+                <button onclick="loadSheet()" class="btn-ghost"
+                    style="margin-top:12px;padding:8px 24px;font-size:0.8rem;">
                     載入試算表
                 </button>
             </div>
@@ -1645,7 +1669,8 @@
         </div>
 
         <footer>
-            <div class="bone-divider"><span class="line"></span><span class="ornament">✦</span><span class="line"></span></div>
+            <div class="bone-divider"><span class="line"></span><span class="ornament">✦</span><span
+                    class="line"></span></div>
             <img src="https://i.meee.com.tw/i0G8sFj.png" class="footer-logo" alt="Logo Watermark">
             <div class="footer-copy">© 2026 拂風手語表演社 · 臺北市立內湖高級中學</div>
             <a class="admin-portal" onclick="handleAdminPortal()">Admin Portal</a>
@@ -1683,13 +1708,13 @@
         }
 
         const events = [
-            { id: '社博', eng: 'Club Fair', desc: '每年招募新血的社博活動' },
-            { id: '湖風藝術季', eng: 'Art Festival', desc: '內湖高中年度藝術盛典' },
-            { id: '校慶', eng: 'School Anniversary', desc: '全校最重要慶典演出' },
-            { id: '手語嘉年華', eng: 'Sign Language Carnival', desc: '跨校手語交流演出' },
-            { id: '聖誕快閃', eng: 'Christmas Flash Mob', desc: '聖誕節校園驚喜快閃' },
-            { id: '新生盃', eng: 'Freshmen Cup', desc: '高一新生成果競賽' },
-            { id: '成果發表', eng: 'Annual Showcase', desc: '年度最高規格成果演出' }
+            { id: '社博', eng: 'Club Fair', desc: '結合表演與介紹的活動,，透過各社團的特色展現，讓學弟妹能夠更了解社團內容' },
+            { id: '湖風藝術季', eng: 'Art Festival', desc: '是內湖高中每年固定舉辦的校內表演活動 透過多元的藝術演出，提供學生展現才藝與成果的舞台,，並豐富校園文化氛圍' },
+            { id: '校慶', eng: 'School Anniversary', desc: '校慶活動中的舞台展演環節，展現平時練習成果與多元才藝，為校慶增添熱鬧氣氛' },
+            { id: '手語嘉年華', eng: 'Sign Language Carnival', desc: '集結12間高中職手語社的大型舞台，見證青春與熱血交織出最耀眼的時刻' },
+            { id: '聖誕快閃', eng: 'Christmas Flash Mob', desc: '於聖誕節期間舉辦的校園活動，透過短時間的表演與互動，營造節慶氛圍，並讓學生在輕鬆的環境中參與校園活動' },
+            { id: '新生盃', eng: 'Freshmen Cup', desc: '是社內舉辦的活動，主要提供學弟妹在上學期的重要表演舞台，讓新成員能透過實際演出展現成果，並累積舞台經驗' },
+            { id: '成果發表', eng: 'Annual Showcase', desc: '是一場屬於高二的收尾舞台，把一整年的練習與回憶濃縮成一場表演，在最後一次站上舞台時，把最完整的自己呈現出來。' }
         ];
 
         const gallery = { '社博': [], '湖風藝術季': [], '校慶': [], '手語嘉年華': [], '聖誕快閃': [], '新生盃': [], '成果發表': [] };
@@ -1875,7 +1900,7 @@
                     await setDoc(doc(db, "gallery", activity), { photos: arrayUnion(url) }, { merge: true });
                     count++;
                     toast(`上傳中... ${count} / ${files.length}`);
-                } catch(err) { console.error('上傳失敗:', file.name); }
+                } catch (err) { console.error('上傳失敗:', file.name); }
             }
             renderPhotos();
             toast(`✓ 成功上傳 ${count} 張圖片`);
@@ -1904,7 +1929,7 @@
                 }
                 await setDoc(doc(db, 'plans', imgId), { url: url }, { merge: true });
                 toast('✓ 圖片已上傳');
-            } catch(err) { toast('✕ 上傳失敗，請重試'); }
+            } catch (err) { toast('✕ 上傳失敗，請重試'); }
         }
 
         async function delP(idx, ev) {
@@ -1913,7 +1938,7 @@
             gallery[activeEv].splice(idx, 1);
             try {
                 await setDoc(doc(db, "gallery", activeEv), { photos: arrayRemove(urlToRemove) }, { merge: true });
-            } catch(err) { console.error('移除失敗', err); }
+            } catch (err) { console.error('移除失敗', err); }
             toast('圖片已刪除');
             renderPhotos();
         }
@@ -1968,7 +1993,7 @@
         }
 
         // Delegate listener for dynamic thumb inputs
-        document.addEventListener('change', async function(e) {
+        document.addEventListener('change', async function (e) {
             if (e.target.classList.contains('thumb-file-input')) {
                 const activity = e.target.dataset.activity;
                 const file = e.target.files[0];
@@ -1977,7 +2002,7 @@
                 try {
                     const url = await uploadToCloudinary(file);
                     await setDoc(doc(db, "covers", activity), { url: url }, { merge: true });
-                    
+
                     const img = document.getElementById('htb-' + activity);
                     if (img) {
                         img.src = url;
@@ -1992,7 +2017,7 @@
                         }
                     }
                     toast('✓ 封面已上傳');
-                } catch(err) { toast('✕ 上傳失敗，請重試'); }
+                } catch (err) { toast('✕ 上傳失敗，請重試'); }
             }
         });
 
