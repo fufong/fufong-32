@@ -97,6 +97,27 @@
             } catch(e) { console.error('讀取 Covers 失敗', e); }
         };
 
+        window.loadPlansFromFirestore = async function() {
+            try {
+                const ids = ['pi1', 'pi2'];
+                for (const imgId of ids) {
+                    const snap = await getDoc(doc(db, 'plans', imgId));
+                    if (snap.exists() && snap.data().url) {
+                        const url = snap.data().url;
+                        const img = document.getElementById(imgId);
+                        if (img) {
+                            img.src = url;
+                            img.style.display = 'block';
+                            img.style.cursor = 'zoom-in';
+                            img.onclick = () => window.openLightbox(url);
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error('讀取企劃圖片失敗', e);
+            }
+        };
+
         window.db = db;
         window.doc = doc;
         window.setDoc = setDoc;
@@ -108,6 +129,7 @@
             loadSavedSheetUrl();
             window.loadGalleryFromFirestore();
             window.loadCoversFromFirestore();
+            window.loadPlansFromFirestore();
         });    </script>
 
     <style>
@@ -1880,6 +1902,7 @@
                         }));
                     }
                 }
+                await setDoc(doc(db, 'plans', imgId), { url: url }, { merge: true });
                 toast('✓ 圖片已上傳');
             } catch(err) { toast('✕ 上傳失敗，請重試'); }
         }
