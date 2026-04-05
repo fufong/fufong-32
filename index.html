@@ -28,6 +28,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // ── Finance Sheets ──
         async function loadSavedSheetUrl() {
             try {
                 const snap = await getDoc(doc(db, 'settings', 'finance'));
@@ -62,7 +63,81 @@
             if (empty)  { empty.style.display = 'none'; }
         }
 
-        window.addEventListener('DOMContentLoaded', loadSavedSheetUrl);
+        // ── Gallery 持久化 ──
+        window.saveGallery = async function(activity, urls) {
+            try {
+                await setDoc(doc(db, 'gallery', activity), { urls });
+            } catch(e) { console.error('gallery 儲存失敗', e); }
+        };
+
+        // ── 封面圖持久化 ──
+        window.saveCover = async function(activity, url) {
+            try {
+                await setDoc(doc(db, 'covers', activity), { url });
+            } catch(e) { console.error('cover 儲存失敗', e); }
+        };
+
+        // ── 企劃圖持久化 ──
+        window.savePlan = async function(imgId, url) {
+            try {
+                await setDoc(doc(db, 'plans', imgId), { url });
+            } catch(e) { console.error('plan 儲存失敗', e); }
+        };
+
+        // ── 頁面載入：還原所有資料 ──
+        async function loadAllData() {
+            await loadSavedSheetUrl();
+
+            // 還原相簿圖片
+            const acts = ['社博','湖風藝術季','校慶','手語嘉年華','聖誕快閃','新生盃','成果發表'];
+            for (const act of acts) {
+                try {
+                    const snap = await getDoc(doc(db, 'gallery', act));
+                    if (snap.exists() && snap.data().urls && snap.data().urls.length) {
+                        window._initGallery = window._initGallery || {};
+                        window._initGallery[act] = snap.data().urls;
+                    }
+                } catch(e) {}
+            }
+
+            // 還原活動封面
+            for (const act of acts) {
+                try {
+                    const snap = await getDoc(doc(db, 'covers', act));
+                    if (snap.exists() && snap.data().url) {
+                        const url = snap.data().url;
+                        const img = document.getElementById('htb-' + act);
+                        if (img) {
+                            img.src = url;
+                            img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+                            img.onclick = () => { if (typeof openLightbox === 'function') openLightbox(url); };
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // 還原企劃封面
+            for (const pid of ['pi1', 'pi2']) {
+                try {
+                    const snap = await getDoc(doc(db, 'plans', pid));
+                    if (snap.exists() && snap.data().url) {
+                        const url = snap.data().url;
+                        const img = document.getElementById(pid);
+                        if (img) {
+                            img.src = url;
+                            img.style.display = 'block';
+                            img.style.cursor = 'zoom-in';
+                            img.onclick = () => { if (typeof openLightbox === 'function') openLightbox(url); };
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // 觸發主 script 套用 gallery 資料
+            window.dispatchEvent(new Event('firebaseDataReady'));
+        }
+
+        window.addEventListener('DOMContentLoaded', loadAllData);
     </script>
 
     <style>
@@ -1656,6 +1731,17 @@
                 fBar.innerHTML += `<button class="filter-btn" id="fbtn-${e.id}" onclick="filterEv('${e.id}')">${e.id}</button>`;
             });
             updateG();
+
+            // 等待 Firebase 資料載入完成後套用 gallery
+            window.addEventListener('firebaseDataReady', () => {
+                if (window._initGallery) {
+                    Object.keys(window._initGallery).forEach(act => {
+                        gallery[act] = window._initGallery[act];
+                    });
+                    renderPhotos();
+                    updateTB();
+                }
+            });
         }
 
         function go(p, detail = null) {
@@ -1811,6 +1897,7 @@
             }
             renderPhotos();
             toast(`✓ 成功上傳 ${count} 張圖片`);
+            if (typeof window.saveGallery === 'function') window.saveGallery(activity, gallery[activity]);
         }
 
         async function hPlan(e, imgId) {
@@ -1831,10 +1918,12 @@
                         container.appendChild(createDeleteBtn(() => {
                             img.src = ''; img.style.display = 'none';
                             toast('✓ 已刪除圖片');
+                            if (typeof window.savePlan === 'function') window.savePlan(imgId, '');
                         }));
                     }
                 }
                 toast('✓ 圖片已上傳');
+                if (typeof window.savePlan === 'function') window.savePlan(imgId, url);
             } catch(err) { toast('✕ 上傳失敗，請重試'); }
         }
 
@@ -1843,6 +1932,7 @@
             gallery[activeEv].splice(idx, 1);
             toast('圖片已刪除');
             renderPhotos();
+            if (typeof window.saveGallery === 'function') window.saveGallery(activeEv, gallery[activeEv]);
         }
 
         function updateTB() {
@@ -1913,10 +2003,12 @@
                             container.appendChild(createDeleteBtn(() => {
                                 img.src = ''; img.style.display = 'none';
                                 toast('✓ 已刪除封面');
+                                if (typeof window.saveCover === 'function') window.saveCover(activity, '');
                             }));
                         }
                     }
                     toast('✓ 封面已上傳');
+                    if (typeof window.saveCover === 'function') window.saveCover(activity, url);
                 } catch(err) { toast('✕ 上傳失敗，請重試'); }
             }
         });
