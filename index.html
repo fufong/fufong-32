@@ -64,108 +64,6 @@
             if (empty) { empty.style.display = 'none'; }
         }
 
-        window.customCovers = {};
-
-        function applyActivityCover(activity) {
-            const img = document.getElementById('htb-' + activity);
-            if (!img) return;
-
-            // 1. 優先使用自訂封面
-            const customUrl = window.customCovers[activity];
-            if (customUrl) {
-                img.src = customUrl;
-                img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
-                img.onclick = () => window.openLightbox(customUrl);
-                setupDeleteButton(activity, img);
-                return;
-            }
-
-            // 2. 自動退回使用相簿第一張
-            const albumPhotos = window.gallery && window.gallery[activity];
-            if (albumPhotos && albumPhotos.length > 0) {
-                const fallbackUrl = albumPhotos[0];
-                img.src = fallbackUrl;
-                img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
-                img.onclick = () => window.openLightbox(fallbackUrl);
-                removeDeleteButton(activity);
-                return;
-            }
-
-            // 3. 皆無照片時隱藏圖片
-            img.src = '';
-            img.style.display = 'none';
-            img.removeAttribute('src');
-            removeDeleteButton(activity);
-        }
-
-        function setupDeleteButton(activity, img) {
-            const container = img.closest('.event-thumb');
-            if (!container) return;
-            if (!container.querySelector('.img-delete-btn')) {
-                container.appendChild(createDeleteBtn(async () => {
-                    const delBtn = container.querySelector('.img-delete-btn');
-                    if (delBtn) delBtn.remove();
-
-                    delete window.customCovers[activity];
-
-                    // 本地快取清除
-                    try {
-                        let cache = JSON.parse(localStorage.getItem('fufong_covers_cache') || '{}');
-                        delete cache[activity];
-                        localStorage.setItem('fufong_covers_cache', JSON.stringify(cache));
-                    } catch(e){}
-
-                    try {
-                        await setDoc(doc(db, "covers", activity), { url: "" }, { merge: true });
-                        toast('✓ 已刪除封面');
-                    } catch (err) {
-                        console.error('刪除封面失敗:', err);
-                        toast('✕ 刪除失敗，請重試');
-                    }
-                    applyActivityCover(activity);
-                }));
-            }
-        }
-
-        function removeDeleteButton(activity) {
-            const img = document.getElementById('htb-' + activity);
-            if (!img) return;
-            const container = img.closest('.event-thumb');
-            if (container) {
-                const delBtn = container.querySelector('.img-delete-btn');
-                if (delBtn) delBtn.remove();
-            }
-        }
-
-        function setupPlanDeleteButton(imgId, img) {
-            const container = img.closest('.plan-hero');
-            if (!container) return;
-            if (!container.querySelector('.img-delete-btn')) {
-                container.appendChild(createDeleteBtn(async () => {
-                    const delBtn = container.querySelector('.img-delete-btn');
-                    if (delBtn) delBtn.remove();
-                    img.src = ''; img.style.display = 'none';
-                    img.removeAttribute('src');
-                    container.classList.add('locked');
-                    
-                    // 清除快取
-                    try {
-                        let cache = JSON.parse(localStorage.getItem('fufong_plans_cache') || '{}');
-                        delete cache[imgId];
-                        localStorage.setItem('fufong_plans_cache', JSON.stringify(cache));
-                    } catch(e){}
-
-                    try {
-                        await setDoc(doc(db, 'plans', imgId), { url: "" }, { merge: true });
-                        toast('✓ 已刪除圖片');
-                    } catch (err) {
-                        console.error('刪除企劃圖片失敗:', err);
-                        toast('✕ 刪除失敗，請重試');
-                    }
-                }));
-            }
-        }
-
         window.loadGalleryFromFirestore = async function () {
             try {
                 const querySnapshot = await getDocs(collection(db, "gallery"));
@@ -178,92 +76,87 @@
                 });
                 if (typeof window.renderPhotos === 'function') window.renderPhotos();
                 if (typeof window.updateTB === 'function') window.updateTB();
-                
-                // 讀取完相簿後，對所有活動套用封面 (Fallback 檢查)
-                for (const act in window.gallery) {
-                    applyActivityCover(act);
-                }
             } catch (e) { console.error('讀取 Gallery 失敗', e); }
         };
 
         window.loadCoversFromFirestore = async function () {
             try {
                 const querySnapshot = await getDocs(collection(db, "covers"));
-                let coversCache = {};
                 querySnapshot.forEach((docSnap) => {
                     const activity = docSnap.id;
                     const data = docSnap.data();
                     if (data.url) {
-                        window.customCovers[activity] = data.url;
-                        coversCache[activity] = data.url;
-                    } else {
-                        delete window.customCovers[activity];
+                        const img = document.getElementById('htb-' + activity);
+                        if (img) {
+                            img.src = data.url;
+                            img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+                            if (typeof window.openLightbox === 'function') {
+                                img.onclick = () => window.openLightbox(data.url);
+                            }
+                            // 載入時若有圖片，為其建立/更新刪除按鈕
+                            const container = img.closest('.event-thumb');
+                            if (container && !container.querySelector('.img-delete-btn')) {
+                                container.appendChild(createDeleteBtn(async () => {
+                                    const delBtn = container.querySelector('.img-delete-btn');
+                                    if (delBtn) delBtn.remove();
+                                    
+                                    if (gallery[activity] && gallery[activity].length > 0) {
+                                        img.src = gallery[activity][0];
+                                        img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+                                        img.onclick = () => window.openLightbox(gallery[activity][0]);
+                                    } else {
+                                        img.src = '';
+                                        img.style.display = 'none';
+                                        img.removeAttribute('src');
+                                    }
+                                    try {
+                                        await setDoc(doc(db, "covers", activity), { url: "" }, { merge: true });
+                                        toast('✓ 已刪除封面');
+                                    } catch (err) {
+                                        console.error('刪除封面失敗:', err);
+                                        toast('✕ 刪除失敗，請重試');
+                                    }
+                                }));
+                            }
+                        }
                     }
-                    applyActivityCover(activity);
                 });
-                // 更新快取
-                localStorage.setItem('fufong_covers_cache', JSON.stringify(coversCache));
             } catch (e) { console.error('讀取 Covers 失敗', e); }
         };
 
         window.loadPlansFromFirestore = async function () {
             try {
-                // 先從快取載入 plans 圖片
-                try {
-                    const plansCache = JSON.parse(localStorage.getItem('fufong_plans_cache') || '{}');
-                    for (const imgId in plansCache) {
-                        const cachedUrl = plansCache[imgId];
-                        const img = document.getElementById(imgId);
-                        if (img && cachedUrl) {
-                            img.src = cachedUrl;
-                            img.style.display = 'block';
-                            img.style.cursor = 'zoom-in';
-                            img.onclick = () => window.openLightbox(cachedUrl);
-                            const container = img.closest('.plan-hero');
-                            if (container) {
-                                container.classList.remove('locked');
-                                setupPlanDeleteButton(imgId, img);
-                            }
-                        }
-                    }
-                } catch(e){}
-
                 const ids = ['pi1', 'pi2'];
-                let plansCache = {};
                 for (const imgId of ids) {
                     const snap = await getDoc(doc(db, 'plans', imgId));
                     if (snap.exists() && snap.data().url) {
                         const url = snap.data().url;
-                        plansCache[imgId] = url;
                         const img = document.getElementById(imgId);
                         if (img) {
-                            if (img.src !== url) {
-                                img.src = url;
-                                img.style.display = 'block';
-                                img.style.cursor = 'zoom-in';
-                                img.onclick = () => window.openLightbox(url);
-                            }
+                            img.src = url;
+                            img.style.display = 'block';
+                            img.style.cursor = 'zoom-in';
+                            img.onclick = () => window.openLightbox(url);
+                            // 載入時若有圖片，為其建立/更新刪除按鈕
                             const container = img.closest('.plan-hero');
-                            if (container) {
-                                container.classList.remove('locked');
-                                setupPlanDeleteButton(imgId, img);
-                            }
-                        }
-                    } else {
-                        const img = document.getElementById(imgId);
-                        if (img) {
-                            img.src = ''; img.style.display = 'none';
-                            img.removeAttribute('src');
-                            const container = img.closest('.plan-hero');
-                            if (container) {
-                                container.classList.add('locked');
-                                const delBtn = container.querySelector('.img-delete-btn');
-                                if (delBtn) delBtn.remove();
+                            if (container && !container.querySelector('.img-delete-btn')) {
+                                container.appendChild(createDeleteBtn(async () => {
+                                    const delBtn = container.querySelector('.img-delete-btn');
+                                    if (delBtn) delBtn.remove();
+                                    img.src = ''; img.style.display = 'none';
+                                    img.removeAttribute('src');
+                                    try {
+                                        await setDoc(doc(db, 'plans', imgId), { url: "" }, { merge: true });
+                                        toast('✓ 已刪除圖片');
+                                    } catch (err) {
+                                        console.error('刪除圖片失敗:', err);
+                                        toast('✕ 刪除失敗，請重試');
+                                    }
+                                }));
                             }
                         }
                     }
                 }
-                localStorage.setItem('fufong_plans_cache', JSON.stringify(plansCache));
             } catch (e) {
                 console.error('讀取企劃圖片失敗', e);
             }
@@ -2153,23 +2046,11 @@
         function init() {
             const grid = document.getElementById('homeEventsGrid');
             const fBar = document.getElementById('evFilters');
-            
-            // 嘗試載入快取的封面 URL，使載入時能瞬間跑出圖片
-            let cachedCovers = {};
-            try {
-                cachedCovers = JSON.parse(localStorage.getItem('fufong_covers_cache') || '{}');
-            } catch(e){}
-
             events.forEach(e => {
-                const cachedUrl = cachedCovers[e.id];
-                const imgStyle = cachedUrl ? 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;' : 'display:none;';
-                const imgSrc = cachedUrl ? cachedUrl : '';
-                const onclickAttr = cachedUrl ? `onclick="window.openLightbox('${cachedUrl}')"` : '';
-
                 grid.innerHTML += `
                     <div class="event-card" onclick="go('events', '${e.id}')">
                         <div class="event-thumb" onclick="handleThumbClick(event, '${e.id}')">
-                            <img id="htb-${e.id}" src="${imgSrc}" style="${imgStyle}" ${onclickAttr} onerror="this.style.display='none'; this.removeAttribute('src');">
+                            <img id="htb-${e.id}" src="" style="display:none;" onerror="this.style.display='none'; this.removeAttribute('src');">
                             <span class="thumb-letter">${e.id[0]}</span>
                             <div class="thumb-upload-overlay">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="24" height="24">
@@ -2188,15 +2069,7 @@
                     </div>`;
                 fBar.innerHTML += `<button class="filter-btn" id="fbtn-${e.id}" onclick="filterEv('${e.id}')">${e.id}</button>`;
             });
-
-            // 把快取的封面也先存入 customCovers，以防在 covers 網路載入前有操作使用到它
-            try {
-                Object.assign(window.customCovers, cachedCovers);
-            } catch(e){}
-
-            events.forEach(e => {
-                applyActivityCover(e.id);
-            });
+            updateG();
         }
 
         function go(p, detail = null) {
@@ -2369,24 +2242,76 @@
                     img.style.cursor = 'zoom-in';
                     img.onclick = () => openLightbox(url);
                     const container = img.closest('.plan-hero');
-                    if (container) {
-                        container.classList.remove('locked');
-                        setupPlanDeleteButton(imgId, img);
+                    if (container && !container.querySelector('.img-delete-btn')) {
+                        container.appendChild(createDeleteBtn(async () => {
+                            const delBtn = container.querySelector('.img-delete-btn');
+                            if (delBtn) delBtn.remove();
+                            img.src = ''; img.style.display = 'none';
+                            img.removeAttribute('src');
+                            try {
+                                await setDoc(doc(db, 'plans', imgId), { url: "" }, { merge: true });
+                                toast('✓ 已刪除圖片');
+                            } catch (err) {
+                                console.error('刪除圖片失敗:', err);
+                                toast('✕ 刪除失敗，請重試');
+                            }
+                        }));
                     }
                 }
-                // 同步寫入本地快取
-                try {
-                    let cache = JSON.parse(localStorage.getItem('fufong_plans_cache') || '{}');
-                    cache[imgId] = url;
-                    localStorage.setItem('fufong_plans_cache', JSON.stringify(cache));
-                } catch(e){}
-
                 await setDoc(doc(db, 'plans', imgId), { url: url }, { merge: true });
                 toast('✓ 圖片已上傳');
-            } catch (err) {
-                console.error(err);
-                toast('✕ 上傳失敗，請重試');
-            }
+            } catch (err) { toast('✕ 上傳失敗，請重試'); }
+        }
+
+        async function delP(idx, ev) {
+            ev.stopPropagation();
+            const urlToRemove = gallery[activeEv][idx];
+            gallery[activeEv].splice(idx, 1);
+            try {
+                await setDoc(doc(db, "gallery", activeEv), { photos: arrayRemove(urlToRemove) }, { merge: true });
+            } catch (err) { console.error('移除失敗', err); }
+            toast('圖片已刪除');
+            renderPhotos();
+        }
+
+        function updateTB() {
+            events.forEach(e => {
+                const img = document.getElementById('htb-' + e.id);
+                if (gallery[e.id].length > 0) {
+                    img.src = gallery[e.id][0];
+                    img.style.display = 'block';
+                } else {
+                    img.style.display = 'none';
+                }
+            });
+        }
+
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function openLightbox(url) {
+            document.getElementById('lightboxImg').src = url;
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+
+
+        function createDeleteBtn(onClick) {
+            const btn = document.createElement('button');
+            btn.className = 'img-delete-btn';
+            btn.innerHTML = '✕';
+            btn.onclick = (e) => { e.stopPropagation(); onClick(); };
+            return btn;
         }
 
         function handlePhotoError(imgEl) {
@@ -2435,17 +2360,40 @@
                 toast('上傳中...');
                 try {
                     const url = await uploadToCloudinary(file);
-
-                    // 更新 customCovers 與本地快取
-                    window.customCovers[activity] = url;
-                    try {
-                        let cache = JSON.parse(localStorage.getItem('fufong_covers_cache') || '{}');
-                        cache[activity] = url;
-                        localStorage.setItem('fufong_covers_cache', JSON.stringify(cache));
-                    } catch(cacheErr){}
-
                     await setDoc(doc(db, "covers", activity), { url: url }, { merge: true });
-                    applyActivityCover(activity);
+
+                    const img = document.getElementById('htb-' + activity);
+                    if (img) {
+                        img.src = url;
+                        img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+                        img.onclick = () => openLightbox(url);
+                        const container = img.closest('.event-thumb');
+                        // 若已有刪除按鈕則移除舊的，再重建含新 url 的刪除按鈕
+                        const oldBtn = container && container.querySelector('.img-delete-btn');
+                        if (oldBtn) oldBtn.remove();
+                        if (container) {
+                            container.appendChild(createDeleteBtn(async () => {
+                                const delBtn = container.querySelector('.img-delete-btn');
+                                if (delBtn) delBtn.remove();
+                                if (gallery[activity] && gallery[activity].length > 0) {
+                                    img.src = gallery[activity][0];
+                                    img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;cursor:zoom-in;';
+                                    img.onclick = () => openLightbox(gallery[activity][0]);
+                                } else {
+                                    img.src = '';
+                                    img.style.display = 'none';
+                                    img.removeAttribute('src');
+                                }
+                                try {
+                                    await setDoc(doc(db, "covers", activity), { url: "" }, { merge: true });
+                                    toast('✓ 已刪除封面');
+                                } catch (err) {
+                                    console.error('刪除封面失敗:', err);
+                                    toast('✕ 刪除失敗，請重試');
+                                }
+                            }));
+                        }
+                    }
                     toast('✓ 封面已上傳');
                 } catch (err) { toast('✕ 上傳失敗，請重試'); }
             }
@@ -2467,55 +2415,6 @@
             document.getElementById('planModal').classList.remove('active');
             document.body.style.overflow = '';
         }
-
-        function toast(msg) {
-            const t = document.getElementById('toast');
-            if (t) {
-                t.innerText = msg;
-                t.classList.add('show');
-                setTimeout(() => t.classList.remove('show'), 3000);
-            }
-        }
-
-        function openLightbox(url) {
-            const lb = document.getElementById('lightbox');
-            const lbImg = document.getElementById('lightboxImg');
-            if (lb && lbImg) {
-                lbImg.src = url;
-                lb.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        function closeLightbox() {
-            const lb = document.getElementById('lightbox');
-            if (lb) {
-                lb.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        }
-
-        function createDeleteBtn(onClick) {
-            const btn = document.createElement('button');
-            btn.className = 'img-delete-btn';
-            btn.innerHTML = '✕';
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                if (confirm('確定要刪除這張圖片嗎？')) {
-                    onClick();
-                }
-            };
-            return btn;
-        }
-
-        function updateTB() {
-            // 目前首頁封面已獨立由 applyActivityCover 管理與 Firebase 同步，此處相簿內部更新亦在 renderPhotos 呼叫，為相容舊呼叫故保留空定義
-        }
-
-        window.openLightbox = openLightbox;
-        window.closeLightbox = closeLightbox;
-        window.toast = toast;
-        window.createDeleteBtn = createDeleteBtn;
 
         document.addEventListener('keydown', (ev) => {
             if (ev.key === 'Escape') {
